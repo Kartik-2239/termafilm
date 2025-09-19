@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import fs from "fs";
-import generateCmd from "./generate.js";
+// import generateCmd from "./generate.js";
+import groqResponse from "./groq.js";
 import { cli, command } from "cleye";
 import readline from "readline";
 import execute from "./execute.js";
@@ -78,7 +79,7 @@ else if (argv.flags.set_key) {
   process.exit(0);
 }
 else if (typeof argv.flags.input === "string"&& argv.flags.input.trim() !== "" && typeof argv.flags.prompt === "string" && argv.flags.prompt.trim() !== "") {
-  const generated_command = await generateCmd(argv.flags.input, argv.flags.prompt, argv.flags.output || "");
+  const generated_command = await groqResponse(argv.flags.input, argv.flags.prompt, argv.flags.output || "");
   console.log("generated command: ", generated_command);
 
   if (argv.flags.yes) {

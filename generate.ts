@@ -28,7 +28,7 @@ function prompt(file: string, prompt: string, outputFile: string): string{
 async function generateCmd(file: string, userPrompt: string, outputFile: string) {
     try {
     const response = await client.responses.create({
-        model: "gpt-5-mini",
+        model: "gpt-oss-120b",
         input: prompt(file, userPrompt, outputFile)
         });
         return response.output_text;
