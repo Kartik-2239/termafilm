@@ -22,7 +22,6 @@ let apiKey = "";
 if (fs.existsSync(configPath)) {
   apiKey = (fs.readFileSync(configPath, "utf8").trim()).split("=")[1] || "";
 }
-apiKey += "-test"
 
 function prompt(file: string, prompt: string, outputFile: string): string{
     return `You are one of the wizards who knows everything about ffmpeg.
