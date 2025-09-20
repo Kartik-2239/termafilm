@@ -29,7 +29,7 @@ function prompt(file: string, prompt: string, outputFile: string): string{
             user prompt: "${prompt}", with the input file: "${file}" and the output file: "${outputFile}".
             a child might be injured if you don't give good results.
             Give just the exact command, no other text or comments.
-            bye default use mp3 for audio and mp4 for video unless specified by the user in the prompt or the output file.`;
+            by default use mp3 for audio and same is input extension for videos unless specified by the user in the prompt or the output file.`;
 }
 
 const groq = new Groq({ apiKey: apiKey });
