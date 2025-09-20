@@ -1,14 +1,28 @@
 import Groq from "groq-sdk";
+import { APIError } from "groq-sdk";
+import { GroqError } from "groq-sdk"
 import fs from "fs";
 import os from "os";
 import path from "path";
 
 const configPath = path.join(os.homedir(), ".termafilm");
 
+const errors = {
+    400: "BadRequestError",
+    401: "AuthenticationError", 
+    403: "PermissionDeniedError",
+    404: "NotFoundError",
+    422: "UnprocessableEntityError",
+    429: "RateLimitError",
+    500: "InternalServerError"
+};
+
+
 let apiKey = "";
 if (fs.existsSync(configPath)) {
-  apiKey = fs.readFileSync(configPath, "utf8").trim();
+  apiKey = (fs.readFileSync(configPath, "utf8").trim()).split("=")[1] || "";
 }
+apiKey += "-test"
 
 function prompt(file: string, prompt: string, outputFile: string): string{
     return `You are one of the wizards who knows everything about ffmpeg.
@@ -37,7 +51,17 @@ export async function getGroqChatCompletion(file: string, userPrompt: string, ou
 
 
 export default async function groqResponse(file: string, prompt: string, outputFile: string) {
-    const chatCompletion = await getGroqChatCompletion(file, prompt, outputFile);
-    // Print the completion returned by the LLM.
-    return chatCompletion.choices[0]?.message?.content || "";
+    try{
+        const chatCompletion = await getGroqChatCompletion(file, prompt, outputFile);
+        // Print the completion returned by the LLM.
+        return chatCompletion.choices[0]?.message?.content || "";
+    }catch(error){
+        if (error instanceof APIError && error.status in errors){
+            console.error(`${error.status}: ${(errors[error.status as keyof typeof errors])}`);
+            console.error("try termafilm -h for help");
+        }else{
+            console.error(`Error: ${error}`);
+        }
+        process.exit(1);
+    }
   }

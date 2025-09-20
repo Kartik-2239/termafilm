@@ -3,7 +3,7 @@
 import fs from "fs";
 // import generateCmd from "./generate.js";
 import groqResponse from "./groq.js";
-import { cli, command } from "cleye";
+import { cli } from "cleye";
 import readline from "readline";
 import execute from "./execute.js";
 
@@ -15,29 +15,22 @@ const configPath = path.join(os.homedir(), ".termafilm");
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
-});
-
+});  
 
 const argv = cli({
   name: 'termafilm',
-
-  // Define parameters
-  // parameters: [
-  //     '<first name>', // First name is required
-  //     '[last name]' // Last name is optional
-  // ],
   flags: {
     // rm_key: {
     //   type: Boolean,
     //   description: 'Remove the OpenAI API key',
     //   alias: 'r',
     // },
-    get_key: {
+    getkey: {
       type: Boolean,
       description: 'Get the OpenAI API key',
       alias: 'g',
     },
-    set_key: {
+    setkey: {
       type: String,
       description: 'Set the OpenAI API key',
       alias: 'k',
@@ -70,15 +63,15 @@ const argv = cli({
   },
 })
 
-if (argv.flags.get_key) {
-  console.log("API key: ", fs.readFileSync(configPath, "utf8").trim());
+if (argv.flags.getkey) {
+  console.log("GROQ API key: ", (fs.readFileSync(configPath, "utf8").trim()).split("=")[1] || "");
   process.exit(0);
 }
-else if (argv.flags.set_key) {
-  fs.writeFileSync(configPath, argv.flags.set_key.trim());
+else if (argv.flags.setkey) {
+  fs.writeFileSync(configPath, "GROQ_API_KEY=" + argv.flags.setkey.trim());
   process.exit(0);
 }
-else if (typeof argv.flags.input === "string"&& argv.flags.input.trim() !== "" && typeof argv.flags.prompt === "string" && argv.flags.prompt.trim() !== "") {
+else if (typeof argv.flags.input === "string" && argv.flags.input.trim() !== "" && typeof argv.flags.prompt === "string" && argv.flags.prompt.trim() !== "") {
   const generated_command = await groqResponse(argv.flags.input, argv.flags.prompt, argv.flags.output || "");
   console.log("generated command: ", generated_command);
 
@@ -102,14 +95,14 @@ else if (typeof argv.flags.input === "string"&& argv.flags.input.trim() !== "" &
         }catch(error){
           console.error(`Error: ${error}`);
           console.log("set key with: termafilm -k <key>");
-          process.exit(1);
+          process.exit(2);
         }
       } else {
         try{
           await execute(generated_command, false);
         }catch(error){
           console.error(`Error: ${error}`);
-          process.exit(1);
+          process.exit(3);
         }
       }
     }
@@ -117,7 +110,6 @@ else if (typeof argv.flags.input === "string"&& argv.flags.input.trim() !== "" &
     process.exit(0);
   });
 }
-  // console.log(argv.flags.input, argv.flags.prompt, argv.flags.output);
 }else {
   console.log("Usage: termafilm -i <input file> -p <prompt> -o <output file>");
   process.exit(1);
