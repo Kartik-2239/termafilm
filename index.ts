@@ -27,39 +27,39 @@ const argv = cli({
     // },
     getkey: {
       type: Boolean,
-      description: 'Get the OpenAI API key',
+      description: 'Get the API key',
       alias: 'g',
     },
     setkey: {
       type: String,
-      description: 'Set the OpenAI API key',
+      description: 'Set the API key',
       alias: 'k',
     },
-      quiet: {
-        type: Boolean,
-        description: 'Doesn\'t show output',
-        alias: 'q',
-      },
-      yes: {
-        type: Boolean,
-        description: 'Execute the command without asking',
-        alias: 'y',
-      },
-      input: {
-        type: String,
-        description: 'Input file',
-        alias: 'i',
-      },
-      prompt: {
-        type: String,
-        description: 'Prompt',
-        alias: 'p',
-      },
-      output: {
-        type: String,
-        description: 'Output file (optional)',
-        alias: 'o',
-      }
+    quiet: {
+      type: Boolean,
+      description: 'Doesn\'t show output',
+      alias: 'q',
+    },
+    yes: {
+      type: Boolean,
+      description: 'Execute the command without asking',
+      alias: 'y',
+    },
+    input: {
+      type: String,
+      description: 'Input file',
+      alias: 'i',
+    },
+    prompt: {
+      type: String,
+      description: 'Prompt',
+      alias: 'p',
+    },
+    output: {
+      type: String,
+      description: 'Output file (optional)',
+      alias: 'o',
+    }
   },
 })
 
@@ -71,7 +71,8 @@ else if (argv.flags.setkey) {
   fs.writeFileSync(configPath, "GROQ_API_KEY=" + argv.flags.setkey.trim());
   process.exit(0);
 }
-else if (typeof argv.flags.input === "string" && argv.flags.input.trim() !== "" && typeof argv.flags.prompt === "string" && argv.flags.prompt.trim() !== "") {
+// else if (typeof argv.flags.input === "string" && argv.flags.input.trim() !== "" && typeof argv.flags.prompt === "string" && argv.flags.prompt.trim() !== "")
+else if (argv.flags.input && argv.flags.prompt) {
   const generated_command = await groqResponse(argv.flags.input, argv.flags.prompt, argv.flags.output || "");
   console.log("generated command: ", generated_command);
 
@@ -112,5 +113,6 @@ else if (typeof argv.flags.input === "string" && argv.flags.input.trim() !== "" 
 }
 }else {
   console.log("Usage: termafilm -i <input file> -p <prompt> -o <output file>");
+  console.log("Use termafilm -h for help");
   process.exit(1);
 }
