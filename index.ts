@@ -6,9 +6,11 @@ import groqResponse from "./groq.js";
 import { cli } from "cleye";
 import readline from "readline";
 import execute from "./execute.js";
+import getVideoDetails from "./getfiledetails.js";
 
 import os from "os";
 import path from "path";
+import checkFile from "./checkfile.js";
 
 const configPath = path.join(os.homedir(), ".termafilm");
 
@@ -72,8 +74,20 @@ else if (argv.flags.setkey) {
   process.exit(0);
 }
 // else if (typeof argv.flags.input === "string" && argv.flags.input.trim() !== "" && typeof argv.flags.prompt === "string" && argv.flags.prompt.trim() !== "")
-else if (argv.flags.input && argv.flags.prompt) {
-  const generated_command = await groqResponse(argv.flags.input, argv.flags.prompt, argv.flags.output || "");
+else if (argv.flags.input && argv.flags.prompt && argv.flags.output) {
+
+  if(checkFile(argv.flags.input) === false){
+    console.error("input file not found");
+    process.exit(1);
+  }
+  if(checkFile(argv.flags.output) === true){
+    console.error("Output file already exists");
+    process.exit(1);
+  }
+
+  const video_data = await getVideoDetails(argv.flags.input);
+  console.log("video data: ", video_data);
+  const generated_command = await groqResponse(argv.flags.input, argv.flags.prompt + " video data: " + JSON.stringify(video_data), argv.flags.output);
   console.log("generated command: ", generated_command);
 
   if (argv.flags.yes) {
@@ -93,6 +107,7 @@ else if (argv.flags.input && argv.flags.prompt) {
           (async () => {
             await execute(generated_command, true);
           })();
+          process.exit(0);
         }catch(error){
           console.error(`Error: ${error}`);
           console.log("set key with: termafilm -k <key>");
