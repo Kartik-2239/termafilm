@@ -1,10 +1,15 @@
 import { exec } from "child_process";
+import * as fs from "fs";
 
 export default function getVideoDetails(filePath: string): Promise<{ duration: number; width: number; height: number; fps: number; codec_name: string }> {
   return new Promise((resolve, reject) => {
+    if (!fs.existsSync(filePath)) {
+      return reject(new Error(`File not found: "${filePath}". Please check that the file exists and the path is correct.`));
+    }
+
     exec(`ffprobe -v quiet -print_format json -show_format -show_streams "${filePath}"`, (err, stdout, stderr) => {
       if (err) {
-        return reject(err)
+        return reject(new Error(`Failed to read video file "${filePath}". Make sure it's a valid video file and FFmpeg can read it.\n\nOriginal error: ${err.message}`))
       }
 
       const info: FFProbeOutput = JSON.parse(stdout);

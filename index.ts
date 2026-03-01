@@ -10,7 +10,7 @@ import getVideoDetails from "./getfiledetails.js";
 
 import os from "os";
 import path from "path";
-import checkFile from "./checkfile.js";
+import {checkFile, checkFolder} from "./checkfile.js";
 
 const configPath = path.join(os.homedir(), ".termafilm");
 
@@ -37,16 +37,6 @@ const argv = cli({
       description: 'Set the API key',
       alias: 'k',
     },
-    quiet: {
-      type: Boolean,
-      description: 'Doesn\'t show output',
-      alias: 'q',
-    },
-    yes: {
-      type: Boolean,
-      description: 'Execute the command without asking',
-      alias: 'y',
-    },
     input: {
       type: String,
       description: 'Input file',
@@ -71,9 +61,9 @@ console.log(`
 ████████╗███████╗██████╗ ███╗   ███╗ █████╗     ███████╗██╗██╗     ███╗   ███╗
 ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██╔══██╗    ██╔════╝██║██║     ████╗ ████║
    ██║   █████╗  ██████╔╝██╔████╔██║███████║    █████╗  ██║██║     ██╔████╔██║
-   ██║   ██╔══╝  ██╔═══╝ ██║╚██╔╝██║██╔══██║    ██╔══╝  ██║██║     ██║╚██╔╝██║
-   ██║   ███████╗██║     ██║ ╚═╝ ██║██║  ██║    ██║     ██║███████╗██║ ╚═╝ ██║
-   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═╝╚═╝  ╚═╝    ╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝
+   ██║   ██╔══╝  ██╔██╔╝ ██║╚██╔╝██║██╔══██║    ██╔══╝  ██║██║     ██║╚██╔╝██║
+   ██║   ███████╗██║  ██ ██║ ╚═╝ ██║██║  ██║    ██║     ██║███████╗██║ ╚═╝ ██║
+   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝    ╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝
       `)
 }
 
@@ -87,55 +77,50 @@ else if (argv.flags.setkey) {
 }
 else if (argv.flags.input && argv.flags.prompt && argv.flags.output) {
 
-  if(checkFile(argv.flags.input) === false){
-    console.error("input file not found");
+  if(checkFile(argv.flags.input) === false && checkFolder(argv.flags.input) === false){
+    console.error(`${argv.flags.input} not found`);
     process.exit(1);
   }
-  if(checkFile(argv.flags.output) === true){
-    console.error("Output file already exists");
-    process.exit(1);
+  let generated_command = "";
+  if (checkFile(argv.flags.input) === true){
+    const video_data = await getVideoDetails(argv.flags.input);
+    generated_command = await groqResponse(argv.flags.input, argv.flags.prompt + " video data: " + JSON.stringify(video_data), argv.flags.output);
+    console.log("generated command: ", generated_command);  
   }
-
-  const video_data = await getVideoDetails(argv.flags.input);
-  const generated_command = await groqResponse(argv.flags.input, argv.flags.prompt + " video data: " + JSON.stringify(video_data), argv.flags.output);
-  console.log("generated command: ", generated_command);
-
-  if (argv.flags.yes) {
-    try{
-      await execute(generated_command, argv.flags.quiet || false);
-      process.exit(0);
-    }catch(error){
-      console.error(`Error: ${error}`);
+  else if (checkFolder(argv.flags.input) === true){
+    const files = fs.readdirSync(argv.flags.input);
+    const file_infos = []
+    if (files.length === 1){
+      console.error(`${argv.flags.input} is empty`);
       process.exit(1);
     }
-  }else{
+    for (const file of files){
+      const video_data = await getVideoDetails(path.join(argv.flags.input, file));
+      file_infos.push({
+        file: file,
+        video_data: video_data
+      });
+    }
+    const generated_commands = []
+    for (const file_info of file_infos){
+      const generated_command = await groqResponse(file_info.file, argv.flags.prompt + " video data: " + JSON.stringify(file_info.video_data), argv.flags.output);
+      generated_commands.push(generated_command);
+    }
+    generated_command = generated_commands.join(" && ");
+    console.log("generated command: ", generated_command);
+  }
   rl.question("Execute command? (y/n)", async(answer) => {
     if (answer === "y") {
-      // console.log("Executing command...");
-      if (argv.flags.quiet) {
-        try{
-          (async () => {
-            await execute(generated_command, true);
-          })();
-          process.exit(0);
-        }catch(error){
-          console.error(`Error: ${error}`);
-          console.log("set key with: termafilm -k <key>");
-          process.exit(2);
-        }
-      } else {
-        try{
-          await execute(generated_command, false);
-        }catch(error){
-          console.error(`Error: ${error}`);
-          process.exit(3);
-        }
+      try{
+        await execute(generated_command, false);
+      }catch(error){
+        console.error(`Error: ${error}`);
+        process.exit(3);
       }
     }
     rl.close();
     process.exit(0);
   });
-}
 }else {
   console.log("Usage: termafilm -i <input file> -p <prompt> -o <output file>");
   console.log("Use termafilm -h for help");
