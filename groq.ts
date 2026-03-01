@@ -33,7 +33,7 @@ if (fs.existsSync(configPath)) {
 function prompt(file: string, prompt: string, outputFile: string): string{
     return `You are one of the wizards who knows everything about ffmpeg.
             Generate an ffmpeg command for satisfying the user's prompt.
-            user request: "${prompt}", with the input file: "${file}" and the output file: "${outputFile}".
+            user request: "${prompt}", with the input file: "${file}" and the output file/folder (if folder, the folder name should be the same as the input file name): "${outputFile}".
             Give just the exact command, no other text or comments.
 
             - Use the same extension as the input unless the user specifies otherwise.

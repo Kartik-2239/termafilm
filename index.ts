@@ -1,32 +1,25 @@
 #!/usr/bin/env node
 
 import fs from "fs";
-// import generateCmd from "./generate.js";
 import groqResponse from "./groq.js";
 import { cli } from "cleye";
 import readline from "readline";
 import execute from "./execute.js";
-import getVideoDetails from "./getfiledetails.js";
-
+import getMediaDetails from "./getfiledetails.js";
 import os from "os";
 import path from "path";
-import {checkFile, checkFolder} from "./checkfile.js";
+import { checkFile, checkFolder } from "./checkfile.js";
 
 const configPath = path.join(os.homedir(), ".termafilm");
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
-});  
+});
 
 const argv = cli({
   name: 'termafilm',
   flags: {
-    // rm_key: {
-    //   type: Boolean,
-    //   description: 'Remove the OpenAI API key',
-    //   alias: 'r',
-    // },
     getkey: {
       type: Boolean,
       description: 'Get the API key',
@@ -51,78 +44,132 @@ const argv = cli({
       type: String,
       description: 'Output file (optional)',
       alias: 'o',
-    }
+    },
+    help: {
+      type: Boolean,
+      description: 'Show help',
+      alias: 'h',
+    },
   },
-})
+});
 
-
-if (process.argv.length === 2) {
-console.log(`
-████████╗███████╗██████╗ ███╗   ███╗ █████╗     ███████╗██╗██╗     ███╗   ███╗
+function banner() {
+  console.log(`
+███████╗███████╗██████╗ ███╗   ███╗ █████╗     ███████╗██╗██╗     ███╗   ███╗
 ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██╔══██╗    ██╔════╝██║██║     ████╗ ████║
    ██║   █████╗  ██████╔╝██╔████╔██║███████║    █████╗  ██║██║     ██╔████╔██║
    ██║   ██╔══╝  ██╔██╔╝ ██║╚██╔╝██║██╔══██║    ██╔══╝  ██║██║     ██║╚██╔╝██║
    ██║   ███████╗██║  ██ ██║ ╚═╝ ██║██║  ██║    ██║     ██║███████╗██║ ╚═╝ ██║
    ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝    ╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝
-      `)
+  `);
 }
 
-if (argv.flags.getkey) {
-  console.log("GROQ API key: ", (fs.readFileSync(configPath, "utf8").trim()).split("=")[1] || "");
-  process.exit(0);
-}
-else if (argv.flags.setkey) {
-  fs.writeFileSync(configPath, "GROQ_API_KEY=" + argv.flags.setkey.trim());
-  process.exit(0);
-}
-else if (argv.flags.input && argv.flags.prompt && argv.flags.output) {
+function help() {
+  console.log(`Usage: termafilm [options]
 
-  if(checkFile(argv.flags.input) === false && checkFolder(argv.flags.input) === false){
-    console.error(`${argv.flags.input} not found`);
+Options:
+  -i, --input <file>    Input video file or folder
+  -p, --prompt <text>   Prompt for the video
+  -o, --output <file>   Output file
+  -k, --setkey <key>    Set GROQ API key
+  -g, --getkey          Get current API key
+  -h, --help            Show this help message
+
+Example:
+  termafilm -i video.mp4 -p "increase bitrate of the video" -o output.mp4
+  termafilm -i videos/ -p "increase bitrate of the video" -o output_videos/
+`);
+}
+
+async function getKey() {
+  const key = fs.readFileSync(configPath, "utf8").trim().split("=")[1] || "";
+  console.log(`GROQ API key: ${key}`);
+  process.exit(0);
+}
+
+function setKey(key: string) {
+  fs.writeFileSync(configPath, `GROQ_API_KEY=${key.trim()}`);
+  console.log("API key saved successfully");
+  process.exit(0);
+}
+
+async function processVideo(input: string, output: string, prompt: string) {
+  if (!checkFile(input) && !checkFolder(input)) {
+    console.error(`Error: "${input}" not found`);
     process.exit(1);
   }
-  let generated_command = "";
-  if (checkFile(argv.flags.input) === true){
-    const video_data = await getVideoDetails(argv.flags.input);
-    generated_command = await groqResponse(argv.flags.input, argv.flags.prompt + " video data: " + JSON.stringify(video_data), argv.flags.output);
-    console.log("generated command: ", generated_command);  
-  }
-  else if (checkFolder(argv.flags.input) === true){
-    const files = fs.readdirSync(argv.flags.input);
-    const file_infos = []
-    if (files.length === 1){
-      console.error(`${argv.flags.input} is empty`);
+
+  let generatedCommand = "";
+
+  if (checkFile(input)) {
+    const videoData = await getMediaDetails(input);
+    generatedCommand = await groqResponse(
+      input,
+      `${prompt} media data: ${JSON.stringify(videoData)}`,
+      output
+    );
+  } else if (checkFolder(input)) {
+    const files = fs.readdirSync(input);
+    if (files.length === 0) {
+      console.error(`Error: "${input}" is empty`);
       process.exit(1);
     }
-    for (const file of files){
-      const video_data = await getVideoDetails(path.join(argv.flags.input, file));
-      file_infos.push({
-        file: file,
-        video_data: video_data
-      });
+
+    const fileInfos = [];
+    for (const file of files) {
+      const videoData = await getMediaDetails(path.join(input, file));
+      fileInfos.push({ path: path.join(input, file), videoData });
     }
-    const generated_commands = []
-    for (const file_info of file_infos){
-      const generated_command = await groqResponse(file_info.file, argv.flags.prompt + " video data: " + JSON.stringify(file_info.video_data), argv.flags.output);
-      generated_commands.push(generated_command);
+
+    const commands = [];
+    for (const info of fileInfos) {
+      const cmd = await groqResponse(
+        info.path,
+        `${prompt} media data: ${JSON.stringify(info.videoData)}`,
+        output + "/" + info.path.split("/").pop()
+      );
+      commands.push(cmd);
     }
-    generated_command = generated_commands.join(" && ");
-    console.log("generated command: ", generated_command);
+    generatedCommand = commands.join(" && ");
   }
-  rl.question("Execute command? (y/n)", async(answer) => {
-    if (answer === "y") {
-      try{
-        await execute(generated_command, false);
-      }catch(error){
+
+  console.log(`Generated command: ${generatedCommand}`);
+
+  rl.question("Execute command? (y/n) ", async (answer) => {
+    rl.close();
+    if (answer.toLowerCase() === "y") {
+      if (!checkFolder(output)) {
+        fs.mkdirSync(output, { recursive: true });
+      }
+      try {
+        await execute(generatedCommand, false);
+      } catch (error) {
         console.error(`Error: ${error}`);
         process.exit(3);
       }
     }
-    rl.close();
     process.exit(0);
   });
-}else {
-  console.log("Usage: termafilm -i <input file> -p <prompt> -o <output file>");
-  console.log("Use termafilm -h for help");
+}
+
+if (process.argv.length === 2) {
+  banner();
+  help();
+  process.exit(0);
+}
+
+if (argv.flags.help) {
+  help();
+  process.exit(0);
+}
+
+if (argv.flags.getkey) {
+  getKey();
+} else if (argv.flags.setkey) {
+  setKey(argv.flags.setkey);
+} else if (argv.flags.input && argv.flags.prompt && argv.flags.output) {
+  processVideo(argv.flags.input, argv.flags.output, argv.flags.prompt);
+} else {
+  help();
   process.exit(1);
 }
