@@ -45,18 +45,7 @@ Basic flow (approve before running):
 
 ```bash
 termafilm -i input.mp4 -p "Extract audio to mp3" -o output.mp3
-```
-
-Auto‑execute without prompt:
-
-```bash
-termafilm -i clip.mov -p "Resize to 1920x1080 at 30 fps" -o clip_1080p.mp4 -y
-```
-
-Quiet execution (suppress ffmpeg stdout/stderr):
-
-```bash
-termafilm -i input.mp4 -p "Trim first 10 seconds" -o trimmed.mp4 -y -q
+termafilm -i folder/ -p "Extract audio to mp3" -o output/
 ```
 
 If any required flag is missing, TermaFilm prints:
@@ -70,8 +59,6 @@ Use termafilm -h for help
 - `-i, --input`     Input file path (required)
 - `-p, --prompt`    Natural‑language request (required)
 - `-o, --output`    Output file path (required and must NOT already exist)
-- `-y, --yes`       Execute without interactive confirmation
-- `-q, --quiet`     Suppress ffmpeg output while running
 - `-k, --setkey`    Save Groq API key to `~/.termafilm`
 - `-g, --getkey`    Print the saved key
 
