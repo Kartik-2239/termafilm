@@ -85,7 +85,6 @@ else if (argv.flags.setkey) {
   fs.writeFileSync(configPath, "GROQ_API_KEY=" + argv.flags.setkey.trim());
   process.exit(0);
 }
-// else if (typeof argv.flags.input === "string" && argv.flags.input.trim() !== "" && typeof argv.flags.prompt === "string" && argv.flags.prompt.trim() !== "")
 else if (argv.flags.input && argv.flags.prompt && argv.flags.output) {
 
   if(checkFile(argv.flags.input) === false){
@@ -98,7 +97,6 @@ else if (argv.flags.input && argv.flags.prompt && argv.flags.output) {
   }
 
   const video_data = await getVideoDetails(argv.flags.input);
-  console.log("video data: ", video_data);
   const generated_command = await groqResponse(argv.flags.input, argv.flags.prompt + " video data: " + JSON.stringify(video_data), argv.flags.output);
   console.log("generated command: ", generated_command);
 
