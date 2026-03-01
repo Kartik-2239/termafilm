@@ -138,7 +138,7 @@ async function processVideo(input: string, output: string, prompt: string) {
   rl.question("Execute command? (y/n) ", async (answer) => {
     rl.close();
     if (answer.toLowerCase() === "y") {
-      if (!checkFolder(output)) {
+      if (!checkFolder(output) && output.split(".").length === 1) {
         fs.mkdirSync(output, { recursive: true });
       }
       try {
