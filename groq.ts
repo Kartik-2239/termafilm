@@ -12,14 +12,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const configPath = path.join(os.homedir(), ".termafilm");
 
-const errors = {
-    400: "BadRequestError",
-    401: "AuthenticationError", 
-    403: "PermissionDeniedError",
-    404: "NotFoundError",
-    422: "UnprocessableEntityError",
-    429: "RateLimitError",
-    500: "InternalServerError"
+const errorMessages: Record<number, string> = {
+    400: "Invalid request. Check your prompt and try again.",
+    401: "Invalid API key. Run 'termafilm -k YOUR_KEY' to set a valid key.", 
+    403: "Access denied. Your API key may not have permission for this resource.",
+    404: "Resource not found. The API endpoint is unavailable.",
+    422: "Request rejected. Check your input parameters.",
+    429: "Rate limit exceeded. Try again later.",
+    500: "Server error. Try again later."
 };
 
 
@@ -35,7 +35,7 @@ function prompt(file: string, prompt: string, outputFile: string): string{
             Generate an ffmpeg command for satisfying the user's prompt.
             user request: "${prompt}", with the input file: "${file}" and the output file/folder (if folder, the folder name should be the same as the input file name): "${outputFile}".
             Give just the exact command, no other text or comments.
-
+            Only give ffmpeg commands.
             - Use the same extension as the input unless the user specifies otherwise.
             - Ensure the chosen codecs are valid for the chosen container.
             - The command must be syntactically valid in ffmpeg (no undefined variables).
@@ -66,9 +66,9 @@ export default async function groqResponse(file: string, prompt: string, outputF
         // Print the completion returned by the LLM.
         return chatCompletion.choices[0]?.message?.content || "";
     }catch(error){
-        if (error instanceof APIError && error.status in errors){
-            console.error(`${error.status}: ${(errors[error.status as keyof typeof errors])}`);
-            console.error("try termafilm -h for help");
+        if (error instanceof APIError && error.status && errorMessages[error.status]){
+            console.error(`Error: ${errorMessages[error.status]}`);
+            console.error("Run 'termafilm -h' for help");
         }else{
             console.error(`Error: ${error}`);
         }
